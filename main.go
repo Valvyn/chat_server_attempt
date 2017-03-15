@@ -25,8 +25,6 @@ func main() {
 }
 
 func handleConnection(connection net.Conn) {
-	fmt.Println(connection)
-	fmt.Println(connection.RemoteAddr())
-	connection.Write([]byte("test"))
+	connection.Write([]byte("Welcome to the Chatserver"))
 	connection.Close()
 }
