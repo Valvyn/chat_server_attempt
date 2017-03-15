@@ -2,29 +2,21 @@ package main
 
 import (
 	"fmt"
-	"net"
+	"net/http"
 )
 
 const serverPort = ":8080"
 
 func main() {
-	serverConnection, err := net.Listen("tcp", serverPort)
-	if err != nil {
-		panic(err.Error())
-	}
 	fmt.Println("Server has been successfully started on port", serverPort)
-
-	for {
-		connection, err := serverConnection.Accept()
-		if err != nil {
-			panic(err.Error())
-		}
-
-		go handleConnection(connection)
-	}
+	http.HandleFunc("/", serveHome)
+	http.HandleFunc("/ws", newWebSocket)
+	http.ListenAndServe(serverPort, nil)
 }
 
-func handleConnection(connection net.Conn) {
-	connection.Write([]byte("Welcome to the Chatserver"))
-	connection.Close()
+func serveHome(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "home.html")
+}
+
+func newWebSocket(w http.ResponseWriter, r *http.Request) {
 }
