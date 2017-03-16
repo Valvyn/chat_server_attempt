@@ -11,12 +11,14 @@ import (
 
 const serverPort = ":8080"
 
-var connectionList map[*websocket.Conn]int8
+var connections []*websocket.Conn
+var incomingMessages chan io.Reader
 
 func main() {
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", newWebSocket)
 	http.ListenAndServe(serverPort, nil)
+
 	fmt.Println("Server has been successfully started on port", serverPort)
 }
 
@@ -36,32 +38,34 @@ func newWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connectionList[conn] = 1
+	connections = append(connections, conn)
 
-	err = handleMessages(conn)
-	if err != nil {
-		log.Fatal(err)
-	}
+	go handleIncomingMessages(conn)
+	go handleOutgoingMessages()
 }
 
-func handleMessages(conn *websocket.Conn) error {
-	for {
-		fmt.Println(connectionList)
-		for client := range connectionList {
-			messageType, r, err := conn.NextReader()
+func handleOutgoingMessages() {
+	for r := range incomingMessages {
+		for _, client := range connections {
+			w, err := client.NextWriter(1)
 			if err != nil {
-				return err
-			}
-			w, err := client.NextWriter(messageType)
-			if err != nil {
-				return err
+				log.Fatal(err)
 			}
 			if _, err := io.Copy(w, r); err != nil {
-				return err
+				log.Fatal(err)
 			}
 			if err := w.Close(); err != nil {
-				return err
+				log.Fatal(err)
 			}
 		}
+	}
+}
+func handleIncomingMessages(conn *websocket.Conn) {
+	for {
+		_, r, err := conn.NextReader()
+		if err != nil {
+			log.Fatal(err)
+		}
+		incomingMessages <- r
 	}
 }
